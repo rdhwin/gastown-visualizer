@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TownCanvas } from "./TownCanvas";
 
 export function App() {
   const [status, setStatus] = useState<string>("loading...");
@@ -11,9 +12,30 @@ export function App() {
   }, []);
 
   return (
-    <div>
-      <h1>Gas Town Visualizer</h1>
-      <p>Server: {status}</p>
+    <div style={{ background: "#111", minHeight: "100vh", padding: "20px 0" }}>
+      <h1
+        style={{
+          textAlign: "center",
+          color: "#e0e0e0",
+          fontFamily: "monospace",
+          fontSize: "1.5rem",
+          marginBottom: "16px",
+        }}
+      >
+        Gas Town Visualizer
+      </h1>
+      <TownCanvas />
+      <p
+        style={{
+          textAlign: "center",
+          color: "#888",
+          fontFamily: "monospace",
+          fontSize: "0.75rem",
+          marginTop: "12px",
+        }}
+      >
+        Server: {status}
+      </p>
     </div>
   );
 }
