@@ -87,6 +87,35 @@ export function drawBuilding(
   ctx.fillText(b.name, x + 16 * s, y + 33 * s);
 }
 
+/** Layout info for building positions, shared with sprite system. */
+export interface BuildingLayout {
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  /** Y position of the path (where workers walk). */
+  pathY: number;
+}
+
+/** Compute building positions for given canvas dimensions. */
+export function getBuildingLayouts(width: number, height: number): BuildingLayout[] {
+  const scale = 3;
+  const groundY = height * 0.55;
+  const pathY = groundY + 30;
+  const buildingW = 32 * scale;
+  const totalBuildingWidth = BUILDINGS.length * buildingW;
+  const gap = (width - totalBuildingWidth) / (BUILDINGS.length + 1);
+  const buildingBaseY = pathY - 30 * scale;
+
+  return BUILDINGS.map((b, i) => ({
+    name: b.name,
+    x: gap + i * (buildingW + gap),
+    y: buildingBaseY,
+    width: buildingW,
+    pathY,
+  }));
+}
+
 /** Draw the full town scene on the canvas. */
 export function drawTown(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const scale = 3; // each art pixel = 3 canvas pixels
