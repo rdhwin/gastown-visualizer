@@ -30,6 +30,11 @@ let cached: PollResult = {
 };
 
 let polling = false;
+let onChange: ((state: PollResult) => void) | null = null;
+
+export function onStateChange(cb: (state: PollResult) => void): void {
+  onChange = cb;
+}
 
 async function runCmd(
   cmd: string,
@@ -72,6 +77,8 @@ async function poll(): Promise<void> {
     lastUpdated: new Date().toISOString(),
     errors,
   };
+
+  onChange?.(cached);
 }
 
 export function startPolling(): void {
