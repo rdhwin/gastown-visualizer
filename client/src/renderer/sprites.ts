@@ -1,4 +1,4 @@
-/** Pixel-art worker sprites with 2-frame walk animation. */
+/** Pixel-art worker sprites with idle animation. */
 
 import { fillRect } from "./draw";
 
@@ -8,9 +8,6 @@ export interface WorkerSprite {
   /** Current pixel position on canvas */
   x: number;
   y: number;
-  /** Target pixel position (for walking) */
-  targetX: number;
-  targetY: number;
   /** Animation frame (0 or 1) */
   frame: number;
   /** Frame timer for animation */
@@ -46,7 +43,7 @@ export function getWorkerColor(rig: string): string {
 
 /**
  * Draw an 8x8 pixel-art worker sprite at canvas position (x, y).
- * Frame 0 = idle/walk-left-foot, Frame 1 = walk-right-foot.
+ * Frame 0 = idle pose A, Frame 1 = idle pose B (subtle arm shift).
  * Scale controls canvas pixels per art pixel.
  */
 export function drawWorker(
@@ -80,27 +77,18 @@ export function drawWorker(
   // Body (colored by rig)
   fillRect(ctx, x + 2 * s, y + 3 * s, 4 * s, 3 * s, color);
 
-  // Arms
+  // Arms — idle animation (subtle shift between poses)
   if (frame === 0) {
-    // Arms down
     fillRect(ctx, x + 1 * s, y + 3 * s, s, 2 * s, skin);
     fillRect(ctx, x + 6 * s, y + 3 * s, s, 2 * s, skin);
   } else {
-    // Arms swinging
-    fillRect(ctx, x + 1 * s, y + 2 * s, s, 2 * s, skin);
-    fillRect(ctx, x + 6 * s, y + 4 * s, s, 2 * s, skin);
+    fillRect(ctx, x + 1 * s, y + 3 * s, s, 3 * s, skin);
+    fillRect(ctx, x + 6 * s, y + 3 * s, s, 3 * s, skin);
   }
 
-  // Legs
-  if (frame === 0) {
-    // Standing / left-foot forward
-    fillRect(ctx, x + 2 * s, y + 6 * s, 2 * s, 2 * s, "#333");
-    fillRect(ctx, x + 4 * s, y + 6 * s, 2 * s, 2 * s, "#333");
-  } else {
-    // Right-foot forward (walk frame)
-    fillRect(ctx, x + 1 * s, y + 6 * s, 2 * s, 2 * s, "#333");
-    fillRect(ctx, x + 5 * s, y + 6 * s, 2 * s, 2 * s, "#333");
-  }
+  // Legs (standing still)
+  fillRect(ctx, x + 2 * s, y + 6 * s, 2 * s, 2 * s, "#333");
+  fillRect(ctx, x + 4 * s, y + 6 * s, 2 * s, 2 * s, "#333");
 
   // Bead icon (small square above head if carrying)
   if (sprite.beadId) {
@@ -115,36 +103,14 @@ export function drawWorker(
   ctx.fillText(sprite.name, x + 4 * s, y + 10 * s);
 }
 
-/** Speed in canvas pixels per update tick. */
-const WALK_SPEED = 1.5;
+/** Idle animation tick interval (ticks between frame swap). */
+const IDLE_INTERVAL = 40;
 
-/** Animation tick interval (frames between sprite frame swap). */
-const ANIM_INTERVAL = 12;
-
-/** Update worker position, moving toward target. Returns true if moved. */
-export function updateWorker(sprite: WorkerSprite): boolean {
-  const dx = sprite.targetX - sprite.x;
-  const dy = sprite.targetY - sprite.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  if (dist < WALK_SPEED) {
-    sprite.x = sprite.targetX;
-    sprite.y = sprite.targetY;
-    sprite.frame = 0; // idle
-    sprite.frameTick = 0;
-    return false;
-  }
-
-  // Move toward target
-  sprite.x += (dx / dist) * WALK_SPEED;
-  sprite.y += (dy / dist) * WALK_SPEED;
-
-  // Animate walk cycle
+/** Update worker idle animation. */
+export function updateWorker(sprite: WorkerSprite): void {
   sprite.frameTick++;
-  if (sprite.frameTick >= ANIM_INTERVAL) {
+  if (sprite.frameTick >= IDLE_INTERVAL) {
     sprite.frameTick = 0;
     sprite.frame = sprite.frame === 0 ? 1 : 0;
   }
-
-  return true;
 }

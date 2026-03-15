@@ -1,4 +1,4 @@
-/** Pixel-art drawing helpers for the town scene. */
+/** Room-based layout drawing helpers for the Gas Town visualizer. */
 
 /** Fill a rectangle with a solid color, pixel-aligned. */
 export function fillRect(
@@ -24,177 +24,128 @@ export function drawPixel(
   fillRect(ctx, px * scale, py * scale, scale, scale, color);
 }
 
-export interface Building {
-  name: string;
-  /** Base colors: wall, roof, door, window */
-  wall: string;
-  roof: string;
-  door: string;
-  window: string;
-}
+/** Color palette for rig room headers. */
+const ROOM_COLORS: Record<string, string> = {
+  gastown: "#5C3317",
+  visualizer: "#2F4F6F",
+  beads: "#3B5E0F",
+  refinery: "#8B0000",
+  mayor: "#8B6914",
+};
 
-const BUILDINGS: Building[] = [
-  { name: "gastown", wall: "#8B4513", roof: "#A0522D", door: "#5C3317", window: "#87CEEB" },
-  { name: "visualizer", wall: "#4682B4", roof: "#2F4F6F", door: "#1B3A5C", window: "#E0E8F0" },
-  { name: "beads", wall: "#6B8E23", roof: "#556B2F", door: "#3B5E0F", window: "#F0E68C" },
-  { name: "refinery", wall: "#B22222", roof: "#8B0000", door: "#5C1010", window: "#FFD700" },
-  { name: "mayor", wall: "#DAA520", roof: "#B8860B", door: "#8B6914", window: "#FFFACD" },
-];
-
-/**
- * Draw a 32x32 pixel-art building at canvas position (x, y).
- * `scale` controls how many canvas pixels per art pixel.
- */
-export function drawBuilding(
-  ctx: CanvasRenderingContext2D,
-  b: Building,
-  x: number,
-  y: number,
-  scale: number,
-) {
-  const s = scale;
-
-  // Roof (triangle-ish, 32 wide x 10 tall in art pixels)
-  for (let row = 0; row < 10; row++) {
-    const indent = 10 - row; // narrower at top
-    const width = 32 - indent * 2;
-    fillRect(ctx, x + indent * s, y + row * s, width * s, s, b.roof);
+/** Get header color for a room based on rig name. */
+export function getRoomColor(rig: string): string {
+  const r = rig.toLowerCase();
+  for (const [key, color] of Object.entries(ROOM_COLORS)) {
+    if (r.includes(key)) return color;
   }
-
-  // Wall body (32 wide x 20 tall, starting at row 10)
-  fillRect(ctx, x, y + 10 * s, 32 * s, 20 * s, b.wall);
-
-  // Door (centered, 6 wide x 10 tall at bottom)
-  fillRect(ctx, x + 13 * s, y + 20 * s, 6 * s, 10 * s, b.door);
-
-  // Door knob
-  fillRect(ctx, x + 17 * s, y + 25 * s, s, s, "#FFD700");
-
-  // Windows (two, 5x5 each)
-  fillRect(ctx, x + 4 * s, y + 13 * s, 5 * s, 5 * s, b.window);
-  fillRect(ctx, x + 23 * s, y + 13 * s, 5 * s, 5 * s, b.window);
-
-  // Window panes (cross lines)
-  fillRect(ctx, x + 6 * s, y + 13 * s, s, 5 * s, b.wall);
-  fillRect(ctx, x + 4 * s, y + 15 * s, 5 * s, s, b.wall);
-  fillRect(ctx, x + 25 * s, y + 13 * s, s, 5 * s, b.wall);
-  fillRect(ctx, x + 23 * s, y + 15 * s, 5 * s, s, b.wall);
-
-  // Label below building
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = `${Math.max(10, s * 5)}px monospace`;
-  ctx.textAlign = "center";
-  ctx.fillText(b.name, x + 16 * s, y + 33 * s);
+  return "#444";
 }
 
-/** Layout info for building positions, shared with sprite system. */
-export interface BuildingLayout {
+/** Room header height in pixels. */
+export const ROOM_HEADER_H = 20;
+/** Room footer height in pixels. */
+export const ROOM_FOOTER_H = 16;
+/** Padding inside room content area. */
+export const ROOM_CONTENT_PAD = 4;
+
+/** Layout info for a room, shared with sprite system. */
+export interface RoomLayout {
   name: string;
   x: number;
   y: number;
   width: number;
-  /** Y position of the path (where workers walk). */
-  pathY: number;
+  height: number;
+  headerColor: string;
 }
 
-/** Compute building positions for given canvas dimensions. */
-export function getBuildingLayouts(width: number, height: number): BuildingLayout[] {
-  const scale = 3;
-  const groundY = height * 0.55;
-  const pathY = groundY + 30;
-  const buildingW = 32 * scale;
-  const totalBuildingWidth = BUILDINGS.length * buildingW;
-  const gap = (width - totalBuildingWidth) / (BUILDINGS.length + 1);
-  const buildingBaseY = pathY - 30 * scale;
+/** Compute room positions for given canvas dimensions and rig names. */
+export function getRoomLayouts(
+  canvasW: number,
+  canvasH: number,
+  rigNames: string[],
+): RoomLayout[] {
+  const n = rigNames.length;
+  if (n === 0) return [];
 
-  return BUILDINGS.map((b, i) => ({
-    name: b.name,
-    x: gap + i * (buildingW + gap),
-    y: buildingBaseY,
-    width: buildingW,
-    pathY,
-  }));
+  const padding = 10;
+  const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+
+  const availW = canvasW - padding * (cols + 1);
+  const availH = canvasH - padding * (rows + 1);
+  const roomW = Math.floor(availW / cols);
+  const roomH = Math.floor(availH / rows);
+
+  return rigNames.map((name, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return {
+      name,
+      x: padding + col * (roomW + padding),
+      y: padding + row * (roomH + padding),
+      width: roomW,
+      height: roomH,
+      headerColor: getRoomColor(name),
+    };
+  });
 }
 
-/** Draw the full town scene on the canvas. */
-export function drawTown(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  const scale = 3; // each art pixel = 3 canvas pixels
-  const groundY = height * 0.55; // ground starts at 55% from top
-  const pathY = groundY + 30;
-  const pathH = 36;
+/** Draw a single room on the canvas. */
+export function drawRoom(
+  ctx: CanvasRenderingContext2D,
+  room: RoomLayout,
+  openBeads: number,
+  closedBeads: number,
+  agentCount: number,
+) {
+  const { x, y, width, height, headerColor } = room;
 
-  // Sky gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
-  skyGrad.addColorStop(0, "#1a1a2e");
-  skyGrad.addColorStop(0.5, "#16213e");
-  skyGrad.addColorStop(1, "#0f3460");
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, width, groundY);
+  // Body background
+  fillRect(ctx, x, y, width, height, "#1e1e3a");
 
-  // Stars
-  const starSeed = 42;
-  for (let i = 0; i < 60; i++) {
-    const sx = ((starSeed * (i + 1) * 7 + 13) % width);
-    const sy = ((starSeed * (i + 1) * 3 + 7) % (groundY - 10));
-    const size = (i % 3) + 1;
-    fillRect(ctx, sx, sy, size, size, i % 5 === 0 ? "#FFFACD" : "#FFFFFF");
-  }
+  // Border
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
 
-  // Moon
-  fillRect(ctx, width - 80, 30, 24, 24, "#FFFACD");
-  fillRect(ctx, width - 74, 28, 18, 4, "#FFF8DC");
+  // Header bar
+  fillRect(ctx, x + 1, y + 1, width - 2, ROOM_HEADER_H, headerColor);
 
-  // Grass ground
-  fillRect(ctx, 0, groundY, width, height - groundY, "#2d5a1e");
+  // Status dot (green if agents present, grey otherwise)
+  const dotColor = agentCount > 0 ? "#4CAF50" : "#666";
+  ctx.beginPath();
+  ctx.arc(x + 12, y + ROOM_HEADER_H / 2 + 1, 3, 0, Math.PI * 2);
+  ctx.fillStyle = dotColor;
+  ctx.fill();
 
-  // Grass texture — darker tufts
-  for (let i = 0; i < 100; i++) {
-    const gx = ((i * 53 + 17) % width);
-    const gy = groundY + ((i * 37 + 11) % (height - groundY));
-    fillRect(ctx, gx, gy, 4, 2, "#1e4a12");
-  }
+  // Rig name in header
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 11px monospace";
+  ctx.textAlign = "left";
+  ctx.fillText(room.name, x + 20, y + 14);
 
-  // Lighter grass tufts
-  for (let i = 0; i < 60; i++) {
-    const gx = ((i * 71 + 29) % width);
-    const gy = groundY + ((i * 43 + 19) % (height - groundY));
-    fillRect(ctx, gx, gy, 3, 2, "#3a7a28");
-  }
+  // Footer background
+  fillRect(ctx, x + 1, y + height - ROOM_FOOTER_H, width - 2, ROOM_FOOTER_H - 1, "#151530");
 
-  // Path (horizontal dirt road)
-  fillRect(ctx, 0, pathY, width, pathH, "#8B7355");
+  // Footer separator
+  fillRect(ctx, x + 1, y + height - ROOM_FOOTER_H, width - 2, 1, "#333");
 
-  // Path detail — lighter stones
-  for (let i = 0; i < 30; i++) {
-    const px = ((i * 47 + 5) % width);
-    const py = pathY + 4 + ((i * 19 + 3) % (pathH - 8));
-    fillRect(ctx, px, py, 6, 3, "#A09070");
-  }
+  // Bead counts in footer
+  ctx.font = "9px monospace";
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#FFD700";
+  ctx.fillText(`\u25CF ${openBeads} open`, x + 6, y + height - 4);
+  ctx.fillStyle = "#4CAF50";
+  const closedX = Math.min(x + width / 2, x + 80);
+  ctx.fillText(`\u2713 ${closedBeads}`, closedX, y + height - 4);
+}
 
-  // Path edges
-  fillRect(ctx, 0, pathY, width, 2, "#6B5B45");
-  fillRect(ctx, 0, pathY + pathH - 2, width, 2, "#6B5B45");
-
-  // Buildings — evenly spaced along the scene, above the path
-  const buildingW = 32 * scale;
-  const totalBuildingWidth = BUILDINGS.length * buildingW;
-  const gap = (width - totalBuildingWidth) / (BUILDINGS.length + 1);
-  const buildingBaseY = pathY - 30 * scale; // buildings sit just above path
-
-  for (let i = 0; i < BUILDINGS.length; i++) {
-    const bx = gap + i * (buildingW + gap);
-    drawBuilding(ctx, BUILDINGS[i], bx, buildingBaseY, scale);
-  }
-
-  // Fence posts along path
-  for (let i = 0; i < 8; i++) {
-    const fx = 30 + i * (width / 8);
-    // Post
-    fillRect(ctx, fx, pathY - 14, 4, 14, "#5C4033");
-    // Top
-    fillRect(ctx, fx - 1, pathY - 16, 6, 3, "#5C4033");
-  }
-
-  // Fence rail
-  fillRect(ctx, 28, pathY - 8, width - 56, 2, "#5C4033");
+/** Fill the canvas background. */
+export function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  fillRect(ctx, 0, 0, width, height, "#111122");
 }

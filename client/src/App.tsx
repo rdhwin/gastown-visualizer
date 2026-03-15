@@ -82,7 +82,7 @@ export function App() {
         }}
       >
         <TownCanvas
-          polecats={apiData.polecats}
+          apiData={apiData}
           onSelect={setSelected}
           selected={selected}
         />

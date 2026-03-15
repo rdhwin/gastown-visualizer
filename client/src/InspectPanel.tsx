@@ -1,7 +1,7 @@
 import { getWorkerColor } from "./renderer/sprites";
 
 export interface SelectedEntity {
-  type: "worker" | "building";
+  type: "worker" | "rig";
   name: string;
 }
 
@@ -135,7 +135,7 @@ function WorkerDetails({
   );
 }
 
-function BuildingDetails({
+function RigDetails({
   name,
   apiData,
 }: {
@@ -146,7 +146,7 @@ function BuildingDetails({
 
   const agents = apiData.polecats.filter((p) => {
     const rig = String(p.rig ?? "").toLowerCase();
-    return rig.includes(name.toLowerCase());
+    return rig.includes(name.toLowerCase()) || name.toLowerCase().includes(rig);
   });
 
   const rigBeads = apiData.beads.filter((b) => {
@@ -169,16 +169,16 @@ function BuildingDetails({
   return (
     <div style={panelStyle}>
       <div style={headerStyle}>
-        <span style={{ color }}>&#9632;</span> BUILDING
+        <span style={{ color }}>&#9632;</span> RIG
       </div>
       <div style={sectionStyle}>
-        <Field label="Rig" value={name} valueColor={color} />
+        <Field label="Name" value={name} valueColor={color} />
       </div>
       <div style={sectionStyle}>
         <div style={subHeaderStyle}>Agents ({agents.length})</div>
         {agents.length === 0 && (
           <div style={{ color: "#666", fontSize: "0.7rem" }}>
-            No agents docked
+            No agents in this rig
           </div>
         )}
         {agents.map((a, i) => (
@@ -232,7 +232,7 @@ export function InspectPanel({ selected, apiData }: InspectPanelProps) {
     return (
       <div style={panelStyle}>
         <div style={headerStyle}>INSPECT</div>
-        <div style={emptyStyle}>Click a building or worker to inspect</div>
+        <div style={emptyStyle}>Click a rig or worker to inspect</div>
       </div>
     );
   }
@@ -241,7 +241,7 @@ export function InspectPanel({ selected, apiData }: InspectPanelProps) {
     return <WorkerDetails name={selected.name} apiData={apiData} />;
   }
 
-  return <BuildingDetails name={selected.name} apiData={apiData} />;
+  return <RigDetails name={selected.name} apiData={apiData} />;
 }
 
 const panelStyle: React.CSSProperties = {
